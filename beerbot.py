@@ -1,6 +1,6 @@
 # twisted imports
 from twisted.words.protocols import irc
-from twisted.internet import reactor, protocol
+from twisted.internet import reactor, protocol, ssl
 from twisted.python import log
 
 # system imports
@@ -11,6 +11,8 @@ import urllib2
 import json
 import random
 import unicodedata
+
+import config
 
 def beerquery():
     baileysurl = 'http://ec2-50-112-236-55.us-west-2.compute.amazonaws.com/api/baileys'
@@ -84,7 +86,12 @@ class BeerBot(irc.IRCClient):
 
     def signedOn(self):
         """Called when bot has succesfully signed on to server."""
+        self.logger.log('identifying to nickserv')
+        self.msg("NickServ", "identify %s" % config.password)
+        self.logger.log('requesting channel invite')
+        self.msg("ChanServ", "invite %s" % config.channel)
         self.join(self.factory.channel)
+        self.logger.log('channel joinied')
 
     def joined(self, channel):
         """This will get called when the bot joins the channel."""
@@ -155,6 +162,11 @@ class BeerBot(irc.IRCClient):
         new_nick = params[0]
         self.logger.log("%s is now known as %s" % (old_nick, new_nick))
 
+    def irc_unknown(self, prefix, command, params):
+        self.logger.log("{0}, {1}, {2}".format(prefix, command, params))
+        if command == "INVITE":
+          self.join(params[1])
+
 
     # For fun, override the method that determines how a nickname is changed on
     # collisions. The default method appends an underscore.
@@ -196,12 +208,13 @@ if __name__ == '__main__':
     log.startLogging(sys.stdout)
 
     # create factory protocol and application
-    channel ='#beer'
+    channel ='#bofh'
     logfile = 'beerlog'
     f = BeerBotFactory(channel, logfile)
 
     # connect factory to this host and port
-    reactor.connectTCP("irc.cat.pdx.edu", 6667, f)
+    #reactor.connectTCP("irc.cat.pdx.edu", 6667, f)
+    reactor.connectSSL("irc.cat.pdx.edu", 6697, f, ssl.ClientContextFactory())
 
     # run bot
     reactor.run()

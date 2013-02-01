@@ -30,7 +30,7 @@ def beerlist():
 def beerinfo(beer):
   beerinfo = {}
   for i in beerquery().iteritems():
-    if i[1]['beer'].lower() == beer.lower():
+    if i[1]['beer'].lower().strip() == beer.lower():
        beerinfo = i[1]
   return beerinfo
 
